@@ -1,56 +1,41 @@
 const { Router } = require('express')
-const messageModel = require('../../dao/models/message.model')
-const productModel = require('../../dao/models/product.model')
-const ProductManagerMongo = require('../../dao/mongoManagers/ProductManagerMongo')
-const CartManagerMongo = require('../../dao/mongoManagers/CartManagerMongo')
+const ViewsController = require('../../controllers/views.controller')
+const { sessionMiddleware } = require('../../middlewares/session.middleware')
+const { authMiddleware } = require('../../middlewares/auth.middleware')
+const passportCall = require('../../middlewares/passport.middleware')
 
 const router = Router()
 
-const productMongoService = new ProductManagerMongo()
-const cartMongoService = new CartManagerMongo()
-
-router.get('/products', async (req, res) => {
-    try {
-        const products = await productMongoService.getProducts(req.query)
-        res.render('index', {
-            title: "E-commerce",
-            styles:"index.css",
-            products: products.docs
-        })
-    } catch (error) {
-        res.status(500).send({
-            status: "error",
-            error: error.message
-        })
-    }
+router.get('/', (req, res)=>{
+    res.redirect('/login')
 })
 
-router.get('/cart/:cid', async (req, res) => {
-    const cartId = req.params.cid 
-    try {
-        const cart = await cartMongoService.getCartById(cartId)
-        res.render('cart', {
-            title: "Cart",
-            styles:"cart.css",
-            products: cart.products,
-            cartId: cart._id
-        })
-    } catch (error) {
-        res.status(500).send({
-            status: "error",
-            error: error.message
-        })
-    }
-})
+router.get('/register', 
+    sessionMiddleware,
+    ViewsController.register
+)
 
-router.get('/chat', async (req,res)=>{
-    const messages = await messageModel.find().lean()
-    res.render('chat', {
-        title: "Super Chat!",
-        styles:"chat.css",
-        messages})
-})
+router.get('/login', 
+    sessionMiddleware,
+    ViewsController.login
+)
 
+router.get('/products',
+    authMiddleware,
+    passportCall('jwt'),
+    ViewsController.products
+)
 
+router.get('/cart/:cid', 
+    authMiddleware,
+    passportCall('jwt'),
+    ViewsController.cart
+)
+
+router.get('/chat', 
+    authMiddleware,
+    passportCall('jwt'),
+    ViewsController.chat
+)
 
 module.exports = router
