@@ -4,6 +4,7 @@ const path = require('path')
 const handlebars = require('express-handlebars')
 const helpers = require('handlebars-helpers')
 const viewsRoutes = require('./routers/views/views.routes')
+const mockRoutes = require('./routers/mock/mock.routes.js')
 const { Server } = require('socket.io')
 const passport = require('passport')
 const initializePassport = require('./config/passport.config')
@@ -13,6 +14,7 @@ const cookieParser = require('cookie-parser')
 const { PORT } = require('./config/enviroment.config')
 
 const app = express()
+
 
 //Middlewares
 app.use(express.json())
@@ -26,6 +28,7 @@ app.use(flash())
 //Router
 app.use('/api', apiRouter)
 app.use('/', viewsRoutes)
+app.use('/mockingproducts', mockRoutes)
 
 //Templates
 const math = helpers.math();
