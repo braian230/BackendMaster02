@@ -1,8 +1,6 @@
 const HTTP_STATUS = require("../constants/api.constants.js");
 const getDaos = require("../models/daos/factory.js");
 const { GetProductDTO, UpdateProductDTO, AddProductDTO } = require("../models/dtos/products.dto.js");
-const CustomError = require("../utils/customError.js");
-const { generateProductErrorInfo } = require("../utils/error.info.js");
 const HttpError = require("../utils/error.utils.js");
 
 const { productsDao } = getDaos()
@@ -29,24 +27,20 @@ class ProductsService {
         return productPayloadDTO
     }
 
-    async createProduct(productPayload, files){
+    async createProduct(productPayload, files, owner){
         const { title, description, code, stock, price, category } = productPayload
         if(!title || !description || !code || !stock || !price || !category){
-            CustomError.createError({
-                name: "Product creation error",
-                cause: generateProductErrorInfo(productPayload),
-                message: "Error trying to create product",
-                code: HTTP_STATUS.BAD_REQUEST
-            })
+            throw new HttpError('Please include all the required fields', HTTP_STATUS.BAD_REQUEST)
         }
-        const productPayloadDTO = new AddProductDTO(productPayload, files)
+
+        const productPayloadDTO = new AddProductDTO(productPayload, files, owner)
         const newProduct = productsDao.add(productPayloadDTO)
         return newProduct
     }
 
     async updateProduct(pid, productPayload){
-        if(!pid || !Object.keys(productPayload).length){
-            throw new HttpError('Please provide an id and a payload for the product', HTTP_STATUS.BAD_REQUEST)
+        if(!pid || !productPayload){
+            throw HttpError('Please provide an id and a payload for the product', HTTP_STATUS.BAD_REQUEST)
         }
         const product = await productsDao.getById(pid)
         if(!product){
@@ -57,9 +51,16 @@ class ProductsService {
         return updatedProduct
     }
 
-    async deleteProduct(pid){
+    async deleteProduct(pid, user){
         if(!pid){
             throw HttpError('Please specify a product ID', HTTP_STATUS.BAD_REQUEST)
+        }
+        const product = await productsDao.getById(pid)
+        if(!product){
+            throw new HttpError('Product not found', HTTP_STATUS.NOT_FOUND)
+        }
+        if(user.role === 'premium' && user.email !== product.owner){
+            throw new HttpError("Only product's owner can delete this resource", HTTP_STATUS.FORBIDDEN)
         }
         const deletedProduct = await productsDao.delete(pid)
         return deletedProduct
